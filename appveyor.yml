@@ -1,0 +1,28 @@
+version: 0.0.1-b{build}
+image: Visual Studio 2017
+before_build:
+- ps: nuget restore
+build:
+  project: Bud.Cp.sln
+  verbosity: minimal
+before_package:
+  - ps: 'cd Bud.Cp; nuget pack Bud.Cp.csproj'
+artifacts:
+  - path: Bud.Cp/bin/Debug/Bud.Cp.dll
+    name: Bud.Cp.dll
+  - path: Bud.Cp/bin/Debug/Bud.Cp.xml
+    name: Bud.Cp.xml
+  - path: 'Bud.Cp/*.nupkg'
+assembly_info:
+  patch: true
+  file: '**\AssemblyInfo.*'
+  assembly_version: '{version}'
+  assembly_file_version: '{version}'
+  assembly_informational_version: '{version}'
+deploy:
+  provider: NuGet
+  api_key:
+    secure: vHH6XlHbTmh514SHTC2RTHVZmB+Tv+7WkhGT7Jz+ctyJyYfa9CbSukRVqYhWSh3e
+  artifact: /.*\.nupkg/
+  on:
+    appveyor_repo_tag: true
