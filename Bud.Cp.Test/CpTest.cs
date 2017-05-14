@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Threading;
 using Moq;
 using NUnit.Framework;
 using static Bud.Cp;
@@ -38,8 +36,7 @@ namespace Bud {
     }
 
     [Test]
-    [Ignore("File.GetLastWriteTime has 1 second resolution on Linux. We cannot use timestamps.")]
-    public void CopyDir_copy_if_modified_since() {
+    public void CopyDir_copy_if_modified() {
       var copyFunctionMock = new Mock<Action<string, string>>();
       CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info");
       dir.CreateFile("foo v2", "source", "foo.txt");
