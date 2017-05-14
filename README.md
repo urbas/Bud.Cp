@@ -14,9 +14,7 @@
 __Copy a source directory to a target directory__:
 
 ```csharp
-Bud.Cp.CopyDir(sourceDir: mySourceDirs,
-               targetDir: "myTargetDir",
-               targetInfo: ".myTargetDir.cp_info.json");
+Bud.Cp.CopyDir(sourceDir: mySourceDirs, targetDir: "myTargetDir", targetInfo: ".myTargetDir.cp_info.json");
 ```
 
 Note: the `.cp_info.json` file is where `Bud.Cp` caches SHA256 signatures of copied files. `Bud.Cp` considers two files the same if they have the same relative path and the same signature.

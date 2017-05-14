@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Bud.TmpDir, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\packages\Bud.TmpDir.1.0.0\lib\net46\Bud.TmpDir.dll</HintPath>
+    </Reference>
     <Reference Include="Castle.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=407dd0808d44fbdc">
       <HintPath>..\packages\Castle.Core.4.0.0\lib\net45\Castle.Core.dll</HintPath>
     </Reference>
@@ -49,10 +52,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CpTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Bud.Cp\Bud.Cp.csproj">
+      <Name>Bud.Cp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Bud.Cp\Bud.Cp.csproj">
+      <Project>{5fdd6e0d-c1b4-48e8-96d1-cbb11d0bc774}</Project>
       <Name>Bud.Cp</Name>
     </ProjectReference>
   </ItemGroup>
