@@ -1,23 +1,50 @@
-﻿using NUnit.Framework;
+﻿using System;
+using System.IO;
+using System.Threading;
+using Moq;
+using NUnit.Framework;
 using static Bud.Cp;
 
 namespace Bud {
   public class CpTest {
-    [Test]
-    public void CopyDir_no_source() {
-      using (var dir = new TmpDir()) {
-        Assert.DoesNotThrow(() => CopyDir(dir.CreatePath("source"), dir.CreatePath("target"),
-                                          dir.CreatePath(".target.cp_info")));
-      }
+    private TmpDir dir;
+    private string fooSrcFile;
+
+    [SetUp]
+    public void SetUp() {
+      dir = new TmpDir();
+      fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
     }
+
+    [TearDown]
+    public void TearDown() => dir.Dispose();
+
+    [Test]
+    public void CopyDir_no_sources()
+      => Assert.DoesNotThrow(() => CopyDir($"{dir}/invalid_dir", $"{dir}/target", $"{dir}/.target.cp_info"));
 
     [Test]
     public void CopyDir_initial_copy() {
-      using (var dir = new TmpDir()) {
-        var srcFile = dir.CreateFile("foo", "source", "foo.txt");
-        CopyDir(dir.CreatePath("source"), dir.CreatePath("target"), dir.CreatePath(".target.cp_info"));
-        FileAssert.AreEqual(srcFile, dir.CreatePath("target", "foo.txt"));
-      }
+      CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info");
+      FileAssert.AreEqual(fooSrcFile, $"{dir}/target/foo.txt");
+    }
+
+    [Test]
+    public void CopyDir_skip_copy() {
+      var copyFunctionMock = new Mock<Action<string, string>>();
+      CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info");
+      CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info", copyFunctionMock.Object);
+      copyFunctionMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    [Ignore("File.GetLastWriteTime has 1 second resolution on Linux. We cannot use timestamps.")]
+    public void CopyDir_copy_if_modified_since() {
+      var copyFunctionMock = new Mock<Action<string, string>>();
+      CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info");
+      dir.CreateFile("foo v2", "source", "foo.txt");
+      CopyDir($"{dir}/source", $"{dir}/target", $"{dir}/.target.cp_info", copyFunctionMock.Object);
+      copyFunctionMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Once);
     }
   }
 }
