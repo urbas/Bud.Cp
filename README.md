@@ -1,11 +1,12 @@
-[![NuGet](https://img.shields.io/nuget/v/Bud.Cp.svg)](https://www.nuget.org/packages/Bud.Cp/)
+[![Build status](https://ci.appveyor.com/api/projects/status/o6n3jbawcrj2wxp2/branch/master?svg=true)](https://ci.appveyor.com/project/urbas/bud-cp/branch/master)
+ [![NuGet](https://img.shields.io/nuget/v/Bud.Cp.svg)](https://www.nuget.org/packages/Bud.Cp/)
 
 
 
 # Bud.Cp
 
 `Bud.Cp` is a C# library for copying directories incrementally. The library does some book-keeping of file signatures to make the copying process a bit speedier.
-
+.
 
 
 ## Use cases

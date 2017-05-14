@@ -8,7 +8,6 @@ namespace Bud {
       using (var dir = new TmpDir()) {
         Assert.DoesNotThrow(() => CopyDir(dir.CreatePath("source"), dir.CreatePath("target"),
                                           dir.CreatePath(".target.cp_info")));
-        ;
       }
     }
 
