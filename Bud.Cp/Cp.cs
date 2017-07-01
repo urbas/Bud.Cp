@@ -7,8 +7,7 @@ using static System.IO.Path;
 
 namespace Bud {
   public static class Cp {
-    public static void CopyDir(string sourceDir, string targetDir, string targetInfo,
-                               Action<string, string> copyFunction = null) {
+    public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null) {
       copyFunction = copyFunction ?? File.Copy;
       CreateDirectory(targetDir);
       var sourceFiles = Exists(sourceDir) ? EnumerateFiles(sourceDir) : Enumerable.Empty<string>();
