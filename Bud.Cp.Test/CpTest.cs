@@ -33,10 +33,10 @@ namespace Bud {
     }
 
     [Test]
-    public void CopyDir_skip_copy() {
-      CopyDir($"{dir}/source", $"{dir}/target");
+    public void CopyDir_skip_unmodified() {
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
-      copyMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Never);
+      CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
+      copyMock.Verify(s => s(fooSrcFile, $"{dir}/target/foo.txt"), Times.Once);
     }
 
     [Test]
@@ -44,7 +44,7 @@ namespace Bud {
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
       File.WriteAllText(fooSrcFile, "foo v2");
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
-      copyMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Exactly(2));
+      copyMock.Verify(s => s(fooSrcFile, $"{dir}/target/foo.txt"), Times.Exactly(2));
     }
   }
 }
