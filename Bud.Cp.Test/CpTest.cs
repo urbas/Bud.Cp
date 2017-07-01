@@ -9,11 +9,13 @@ namespace Bud {
     private TmpDir dir;
     private string fooSrcFile;
     private Mock<Action<string, string>> copyMock;
+    private string fooTargetFile;
 
     [SetUp]
     public void SetUp() {
       dir = new TmpDir();
       fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
+      fooTargetFile = dir.CreatePath("target", "foo.txt");
       copyMock = new Mock<Action<string, string>>();
       copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
               .Callback((string sourceFile, string targetFile) => CopyFile(sourceFile, targetFile));
@@ -29,14 +31,14 @@ namespace Bud {
     [Test]
     public void CopyDir_initial_copy() {
       CopyDir($"{dir}/source", $"{dir}/target");
-      FileAssert.AreEqual(fooSrcFile, $"{dir}/target/foo.txt");
+      FileAssert.AreEqual(fooSrcFile, fooTargetFile);
     }
 
     [Test]
     public void CopyDir_skip_unmodified() {
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
-      copyMock.Verify(s => s(fooSrcFile, $"{dir}/target/foo.txt"), Times.Once);
+      copyMock.Verify(s => s(fooSrcFile, fooTargetFile), Times.Once);
     }
 
     [Test]
@@ -44,7 +46,7 @@ namespace Bud {
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
       File.WriteAllText(fooSrcFile, "foo v2");
       CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
-      copyMock.Verify(s => s(fooSrcFile, $"{dir}/target/foo.txt"), Times.Exactly(2));
+      copyMock.Verify(s => s(fooSrcFile, fooTargetFile), Times.Exactly(2));
     }
   }
 }
