@@ -8,7 +8,7 @@ using static System.IO.Path;
 namespace Bud {
   public static class Cp {
     public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null) {
-      copyFunction = copyFunction ?? File.Copy;
+      copyFunction = copyFunction ?? CopyFile;
       CreateDirectory(targetDir);
       var sourceFiles = Exists(sourceDir) ? EnumerateFiles(sourceDir) : Enumerable.Empty<string>();
       var sourceDirUri = new Uri(sourceDir + "/");
@@ -39,5 +39,8 @@ namespace Bud {
       hashAlgorithm.TransformFinalBlock(buffer, 0, 0);
       return hashAlgorithm.Hash;
     }
+
+    internal static void CopyFile(string sourceFile, string targetFile)
+      => File.Copy(sourceFile, targetFile, overwrite: true);
   }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Moq;
 using NUnit.Framework;
 using static Bud.Cp;
@@ -7,11 +8,15 @@ namespace Bud {
   public class CpTest {
     private TmpDir dir;
     private string fooSrcFile;
+    private Mock<Action<string, string>> copyMock;
 
     [SetUp]
     public void SetUp() {
       dir = new TmpDir();
       fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
+      copyMock = new Mock<Action<string, string>>();
+      copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
+              .Callback((string sourceFile, string targetFile) => CopyFile(sourceFile, targetFile));
     }
 
     [TearDown]
@@ -29,19 +34,17 @@ namespace Bud {
 
     [Test]
     public void CopyDir_skip_copy() {
-      var copyFunctionMock = new Mock<Action<string, string>>();
       CopyDir($"{dir}/source", $"{dir}/target");
-      CopyDir($"{dir}/source", $"{dir}/target", copyFunctionMock.Object);
-      copyFunctionMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Never);
+      CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
+      copyMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Never);
     }
 
     [Test]
     public void CopyDir_copy_if_modified() {
-      var copyFunctionMock = new Mock<Action<string, string>>();
-      CopyDir($"{dir}/source", $"{dir}/target");
-      dir.CreateFile("foo v2", "source", "foo.txt");
-      CopyDir($"{dir}/source", $"{dir}/target", copyFunctionMock.Object);
-      copyFunctionMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Once);
+      CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
+      File.WriteAllText(fooSrcFile, "foo v2");
+      CopyDir($"{dir}/source", $"{dir}/target", copyMock.Object);
+      copyMock.Verify(s => s(fooSrcFile, It.IsAny<string>()), Times.Exactly(2));
     }
   }
 }
