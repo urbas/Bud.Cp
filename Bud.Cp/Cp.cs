@@ -16,7 +16,7 @@ namespace Bud {
       foreach (var sourceFile in sourceFiles) {
         var sourceFileUri = new Uri(sourceFile);
         var relPath = sourceDirUri.MakeRelativeUri(sourceFileUri).ToString();
-        var targetPath = Combine(targetDir, relPath);
+        var targetPath = $"{targetDir}/{relPath}";
         if (!File.Exists(targetPath) || !FileDigestsEqual(sourceFile, buffer, targetPath)) {
           copyFunction(sourceFile, targetPath);
         }
