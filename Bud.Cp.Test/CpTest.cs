@@ -52,5 +52,13 @@ namespace Bud {
       CopyDir(sourceDir, targetDir, copyMock.Object);
       copyMock.Verify(s => s(fooSrcFile, fooTargetFile), Times.Exactly(2));
     }
+
+    [Test]
+    public void CopyDir_remove_deleted_files() {
+      CopyDir(sourceDir, targetDir, copyMock.Object);
+      File.Delete(fooSrcFile);
+      CopyDir(sourceDir, targetDir, copyMock.Object);
+      FileAssert.DoesNotExist(fooTargetFile);
+    }
   }
 }

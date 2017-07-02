@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -10,18 +11,49 @@ namespace Bud {
     public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null) {
       copyFunction = copyFunction ?? CopyFile;
       CreateDirectory(targetDir);
-      var sourceFiles = Exists(sourceDir) ? EnumerateFiles(sourceDir) : Enumerable.Empty<string>();
-      var sourceDirUri = new Uri(sourceDir + "/");
+      var targetRelPaths = GetRelPaths(targetDir);
+      var sourceRelPaths = GetRelPaths(sourceDir);
+      CopyMissingFiles(sourceDir, targetDir, copyFunction, sourceRelPaths, targetRelPaths);
+      OverwriteExistingFiles(sourceDir, targetDir, copyFunction, sourceRelPaths, targetRelPaths);
+      DeleteExtraneousFiles(targetDir, targetRelPaths, sourceRelPaths);
+    }
+
+    private static void CopyMissingFiles(string sourceDir, string targetDir, Action<string, string> copyFunction, 
+                                         HashSet<string> sourceRelPaths, HashSet<string> targetRelPaths) {
+      foreach (var relPathToCopy in sourceRelPaths.Except(targetRelPaths)) {
+        var sourceAbsPath = GetFullPath(Combine(sourceDir, relPathToCopy));
+        var targetAbsPath = GetFullPath(Combine(targetDir, relPathToCopy));
+        copyFunction(sourceAbsPath, targetAbsPath);
+      }
+    }
+
+    private static void OverwriteExistingFiles(string sourceDir, string targetDir, Action<string, string> copyFunction,
+                                               HashSet<string> sourceRelPaths, HashSet<string> targetRelPaths) {
       var buffer = new byte[16384];
-      foreach (var sourceFile in sourceFiles) {
-        var sourceFileUri = new Uri(sourceFile);
-        var relPath = sourceDirUri.MakeRelativeUri(sourceFileUri).ToString();
-        var targetPath = GetFullPath(Combine(targetDir, relPath));
-        if (!File.Exists(targetPath) || !FileDigestsEqual(sourceFile, buffer, targetPath)) {
-          copyFunction(sourceFile, targetPath);
+      foreach (var relPathToOverwrite in sourceRelPaths.Intersect(targetRelPaths)) {
+        var sourceAbsPath = GetFullPath(Combine(sourceDir, relPathToOverwrite));
+        var targetAbsPath = GetFullPath(Combine(targetDir, relPathToOverwrite));
+        if (!FileDigestsEqual(sourceAbsPath, buffer, targetAbsPath)) {
+          copyFunction(sourceAbsPath, targetAbsPath);
         }
       }
     }
+
+    private static void DeleteExtraneousFiles(string targetDir, HashSet<string> targetRelPaths, 
+                                              HashSet<string> sourceRelPaths) {
+      foreach (var targetFileToDelete in targetRelPaths.Except(sourceRelPaths)) {
+        File.Delete(Combine(targetDir, targetFileToDelete));
+      }
+    }
+
+    private static HashSet<string> GetRelPaths(string dir) {
+      var dirUri = new Uri(dir + "/");
+      var absPaths = Exists(dir) ? EnumerateFiles(dir) : Enumerable.Empty<string>();
+      return new HashSet<string>(absPaths.Select(absPath => ToRelPath(dirUri, absPath)));
+    }
+
+    private static string ToRelPath(Uri basePath, string absPath)
+      => basePath.MakeRelativeUri(new Uri(absPath)).ToString();
 
     private static bool FileDigestsEqual(string sourceFile, byte[] buffer, string targetPath)
       => DigestFile(sourceFile, buffer).SequenceEqual(DigestFile(targetPath, buffer));
