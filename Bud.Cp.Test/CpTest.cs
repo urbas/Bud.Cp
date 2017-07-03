@@ -7,19 +7,22 @@ using static Bud.Cp;
 namespace Bud {
   public class CpTest {
     private TmpDir dir;
-    private string fooSrcFile;
     private Mock<Action<string, string>> copyMock;
-    private string fooTargetFile;
     private string sourceDir;
+    private string fooSrcFile;
+    private string fooTargetFile;
     private string targetDir;
 
     [SetUp]
     public void SetUp() {
       dir = new TmpDir();
-      fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
-      fooTargetFile = dir.CreatePath("target", "foo.txt");
+      
       sourceDir = dir.CreatePath("source");
+      fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
+      
       targetDir = dir.CreatePath("target");
+      fooTargetFile = dir.CreatePath("target", "foo.txt");
+      
       copyMock = new Mock<Action<string, string>>();
       copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
               .Callback((string sourceFile, string targetFile) => CopyFile(sourceFile, targetFile));
@@ -46,7 +49,7 @@ namespace Bud {
     }
 
     [Test]
-    public void CopyDir_copy_if_modified() {
+    public void CopyDir_overwrite_if_modified() {
       CopyDir(sourceDir, targetDir, copyMock.Object);
       File.WriteAllText(fooSrcFile, "foo v2");
       CopyDir(sourceDir, targetDir, copyMock.Object);
@@ -59,6 +62,18 @@ namespace Bud {
       File.Delete(fooSrcFile);
       CopyDir(sourceDir, targetDir, copyMock.Object);
       FileAssert.DoesNotExist(fooTargetFile);
+    }
+
+    [Test]
+    public void CopyDir_from_multiple_source_directories() {
+      var sourceDir2 = dir.CreatePath("source2");
+      var barSrc2File = dir.CreateFile("bar", "source2", "bar.txt");
+      var barTargetFile = dir.CreatePath("target", "bar.txt");
+      
+      CopyDir(new []{sourceDir, sourceDir2}, targetDir);
+      
+      FileAssert.AreEqual(fooSrcFile, fooTargetFile);
+      FileAssert.AreEqual(barSrc2File, barTargetFile);
     }
   }
 }

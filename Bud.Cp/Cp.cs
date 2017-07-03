@@ -8,40 +8,53 @@ using static System.IO.Path;
 
 namespace Bud {
   public static class Cp {
-    public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null) {
+    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir,
+                               Action<string, string> copyFunction = null) {
       copyFunction = copyFunction ?? CopyFile;
       CreateDirectory(targetDir);
       var targetRelPaths = GetRelPaths(targetDir);
-      var sourceRelPaths = GetRelPaths(sourceDir);
-      CopyMissingFiles(sourceDir, targetDir, copyFunction, sourceRelPaths, targetRelPaths);
-      OverwriteExistingFiles(sourceDir, targetDir, copyFunction, sourceRelPaths, targetRelPaths);
-      DeleteExtraneousFiles(targetDir, targetRelPaths, sourceRelPaths);
+      var sourceRelPaths = sourceDirs.Select(sourceDir => Tuple.Create(sourceDir, GetRelPaths(sourceDir))).ToList();
+      CopyMissingFiles(sourceRelPaths, targetDir, targetRelPaths, copyFunction);
+      OverwriteExistingFiles(sourceRelPaths, targetDir, targetRelPaths, copyFunction);
+      DeleteExtraneousFiles(sourceRelPaths, targetDir, targetRelPaths);
     }
 
-    private static void CopyMissingFiles(string sourceDir, string targetDir, Action<string, string> copyFunction, 
-                                         HashSet<string> sourceRelPaths, HashSet<string> targetRelPaths) {
-      foreach (var relPathToCopy in sourceRelPaths.Except(targetRelPaths)) {
-        var sourceAbsPath = GetFullPath(Combine(sourceDir, relPathToCopy));
-        var targetAbsPath = GetFullPath(Combine(targetDir, relPathToCopy));
-        copyFunction(sourceAbsPath, targetAbsPath);
-      }
-    }
+    public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null)
+      => CopyDir(new[] {sourceDir}, targetDir, copyFunction);
 
-    private static void OverwriteExistingFiles(string sourceDir, string targetDir, Action<string, string> copyFunction,
-                                               HashSet<string> sourceRelPaths, HashSet<string> targetRelPaths) {
-      var buffer = new byte[16384];
-      foreach (var relPathToOverwrite in sourceRelPaths.Intersect(targetRelPaths)) {
-        var sourceAbsPath = GetFullPath(Combine(sourceDir, relPathToOverwrite));
-        var targetAbsPath = GetFullPath(Combine(targetDir, relPathToOverwrite));
-        if (!FileDigestsEqual(sourceAbsPath, buffer, targetAbsPath)) {
+    private static void CopyMissingFiles(IEnumerable<Tuple<string, HashSet<string>>> sourceRelPaths, string targetDir,
+                                         HashSet<string> targetRelPaths, Action<string, string> copyFunction) {
+      foreach (var dir2RelPaths in sourceRelPaths) {
+        foreach (var relPathToCopy in dir2RelPaths.Item2.Except(targetRelPaths)) {
+          var sourceAbsPath = GetFullPath(Combine(dir2RelPaths.Item1, relPathToCopy));
+          var targetAbsPath = GetFullPath(Combine(targetDir, relPathToCopy));
           copyFunction(sourceAbsPath, targetAbsPath);
         }
       }
     }
 
-    private static void DeleteExtraneousFiles(string targetDir, HashSet<string> targetRelPaths, 
-                                              HashSet<string> sourceRelPaths) {
-      foreach (var targetFileToDelete in targetRelPaths.Except(sourceRelPaths)) {
+    private static void OverwriteExistingFiles(IEnumerable<Tuple<string, HashSet<string>>> sourceDirs2RelPaths,
+                                               string targetDir, HashSet<string> targetRelPaths,
+                                               Action<string, string> copyFunction) {
+      var buffer = new byte[16384];
+      foreach (var dir2RelPaths in sourceDirs2RelPaths) {
+        foreach (var relPathToOverwrite in dir2RelPaths.Item2.Intersect(targetRelPaths)) {
+          var sourceAbsPath = GetFullPath(Combine(dir2RelPaths.Item1, relPathToOverwrite));
+          var targetAbsPath = GetFullPath(Combine(targetDir, relPathToOverwrite));
+          if (!FileDigestsEqual(sourceAbsPath, buffer, targetAbsPath)) {
+            copyFunction(sourceAbsPath, targetAbsPath);
+          }
+        }
+      }
+    }
+
+    private static void DeleteExtraneousFiles(IEnumerable<Tuple<string, HashSet<string>>> sourceRelPaths,
+                                              string targetDir, HashSet<string> targetRelPaths) {
+      var allSourceRelPaths = sourceRelPaths.Aggregate(new HashSet<string>(), (aggregate, sourceDir2RelPaths) => {
+        aggregate.UnionWith(sourceDir2RelPaths.Item2);
+        return aggregate;
+      });
+      foreach (var targetFileToDelete in targetRelPaths.Except(allSourceRelPaths)) {
         File.Delete(Combine(targetDir, targetFileToDelete));
       }
     }
