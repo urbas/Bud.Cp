@@ -13,7 +13,7 @@ Main idea behind `Bud.Cp` is that you can define your own file signatures system
 ## Use cases
 
 
-__Copy a source directory to a target directory__:
+### Copy a source directory to a target directory
 
 ```csharp
 Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir");
@@ -22,7 +22,7 @@ Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir");
 Warning: This will delete files in the target directory that no longer exist in the source directory.
 
 
-__Copy multiple source directories into a single target dir__:
+### Copy multiple source directories into a single target dir
 
 ```csharp
 Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
@@ -31,7 +31,7 @@ Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
 Warning: This will delete files in the target directory that no longer exist in the source directory.
 
 
-__Use your own file signatures__:
+### Use your own file signatures
 
 ```csharp
 Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
