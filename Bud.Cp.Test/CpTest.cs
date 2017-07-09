@@ -32,8 +32,7 @@ namespace Bud {
     public void TearDown() => dir.Dispose();
 
     [Test]
-    public void CopyDir_no_sources()
-      => Assert.DoesNotThrow(() => CopyDir($"{dir}/invalid_dir", targetDir));
+    public void CopyDir_no_sources() => Assert.DoesNotThrow(() => CopyDir($"{dir}/invalid_dir", targetDir));
 
     [Test]
     public void CopyDir_initial_copy() {
@@ -74,6 +73,17 @@ namespace Bud {
       
       FileAssert.AreEqual(fooSrcFile, fooTargetFile);
       FileAssert.AreEqual(barSrc2File, barTargetFile);
+    }
+
+    [Test]
+    public void CopyDir_overwrite_uses_custom_file_signatures() {
+      var fileSignaturesMock = new Mock<IFileSignatures>();
+      
+      CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
+      CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
+      
+      fileSignaturesMock.Verify(self => self.GetSignature(fooSrcFile), Times.Once);
+      fileSignaturesMock.Verify(self => self.GetSignature(fooTargetFile), Times.Once);
     }
   }
 }

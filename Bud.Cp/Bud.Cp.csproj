@@ -42,7 +42,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cp.cs" />
+    <Compile Include="IFileSignatures.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Sha256FileSignatures.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
