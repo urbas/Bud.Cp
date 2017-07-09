@@ -5,8 +5,9 @@
 
 # Bud.Cp
 
-`Bud.Cp` is a C# library for copying directories incrementally. The library does some book-keeping of file signatures to make the copying process a bit speedier.
-.
+`Bud.Cp` is a C# library for copying directories. The library uses SHA256 signatures to make incremental copies a bit speedier.
+
+Main idea behind `Bud.Cp` is that you can define your own file signatures system. This can be used by build systems to make incremental copying even faster. For example, a signature of a file might be calculated from the signature of the task that created the file instead of reading every byte of the file and calculating a cryptographic hash. To make incremental copies even faster build systems with immutable source directories and output directories can also persist signatures in a file.
 
 
 ## Use cases
@@ -15,51 +16,20 @@
 __Copy a source directory to a target directory__:
 
 ```csharp
-Bud.Cp.CopyDir(sourceDir: mySourceDirs, targetDir: "myTargetDir", targetInfo: ".myTargetDir.cp_info.json");
+Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir");
 ```
-
-Note: the `.cp_info.json` file is where `Bud.Cp` caches SHA256 signatures of copied files. `Bud.Cp` considers two files the same if they have the same relative path and the same signature.
 
 
 __Copy multiple source directories into a single target dir__:
 
-Note: the source directories must have accompanying `.cp_info` directories.
-
 ```csharp
-Bud.Cp.CopyDirs(sourceDirs: mySourceDirs,
-                targetDir: "myTargetDir",
-                sourceInfos: mySourceInfos,
-                targetInfo: ".myTargetDir.cp_info.json");
+Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
 ```
 
 
-__Load a `.cp_info.json` file for a directory__:
+__Use your own file signatures__:
 
 ```csharp
-Bud.Cp.LoadSignatures(".myDir.cp_info.json");
-```
-
-
-__Create a `.cp_info.json` file for a directory__:
-
-```csharp
-Bud.Cp.StoreSignatures(".myDir.cp_info.json", fileToSignatures);
-```
-
-
-
-## `.cp_info.json` schema
-
-```json
-{
-  "files": {
-    "foo/bar.txt": {
-      "sha256": "0123456789abcdef"
-    },
-    "foo/baz.txt": {
-      "sha256": "0123456789abcdef"
-    }
-    ...
-  }
-}
+Bud.Cp.CopyDirs(sourceDir: "mySourceDir", targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
+Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
 ```

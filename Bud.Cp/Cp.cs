@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using static System.IO.Directory;
-using static System.IO.Path;
 
 namespace Bud {
   public static class Cp {
@@ -12,13 +11,13 @@ namespace Bud {
       copyFunction = copyFunction ?? CopyFile;
       fileSignatures = fileSignatures ?? new Sha256FileSignatures();
       CreateDirectory(targetDir);
-      
-      var targetDirUri = new Uri(targetDir+ "/");
+
+      var targetDirUri = new Uri(targetDir + "/");
       var targetRelPaths = GetRelPaths(targetDirUri);
       var sourceRelPaths = sourceDirs.Select(sourceDir => new Uri(sourceDir + "/"))
                                      .Select(sourceDir => Tuple.Create(sourceDir, GetRelPaths(sourceDir)))
                                      .ToList();
-      
+
       CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction);
       OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction, fileSignatures);
       DeleteExtraneousFiles(sourceRelPaths, targetDirUri, targetRelPaths);
