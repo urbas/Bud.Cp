@@ -18,10 +18,10 @@ namespace Bud {
       dir = new TmpDir();
       
       sourceDir = dir.CreatePath("source");
-      fooSrcFile = dir.CreateFile("foo", "source", "foo.txt");
+      fooSrcFile = ToUri(dir.CreateFile("foo", "source", "foo.txt"));
       
       targetDir = dir.CreatePath("target");
-      fooTargetFile = dir.CreatePath("target", "foo.txt");
+      fooTargetFile = ToUri(dir.CreatePath("target", "foo.txt"));
       
       copyMock = new Mock<Action<string, string>>();
       copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
@@ -85,5 +85,7 @@ namespace Bud {
       fileSignaturesMock.Verify(self => self.GetSignature(fooSrcFile), Times.Once);
       fileSignaturesMock.Verify(self => self.GetSignature(fooTargetFile), Times.Once);
     }
+    
+    private static string ToUri(string path) => new Uri(path).AbsolutePath;
   }
 }
