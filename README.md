@@ -34,6 +34,6 @@ Warning: This will delete files in the target directory that no longer exist in 
 __Use your own file signatures__:
 
 ```csharp
-Bud.Cp.CopyDirs(sourceDir: "mySourceDir", targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
+Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
 Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
 ```
