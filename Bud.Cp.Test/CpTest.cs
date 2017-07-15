@@ -17,11 +17,11 @@ namespace Bud {
     public void SetUp() {
       dir = new TmpDir();
 
-      sourceDir = new Uri(dir.CreatePath("source"));
-      fooSrcFile = new Uri(dir.CreateFile("foo", "source", "foo.txt"));
+      sourceDir = CreatePath("source");
+      fooSrcFile = CreateFile("foo", "source", "foo.txt");
 
-      targetDir = new Uri(dir.CreatePath("target"));
-      fooTargetFile = new Uri(dir.CreatePath("target", "foo.txt"));
+      targetDir = CreatePath("target");
+      fooTargetFile = CreatePath("target", "foo.txt");
 
       storage = new Mock<IStorage>();
       var localStorage = new LocalStorage();
@@ -33,6 +33,8 @@ namespace Bud {
              .Callback((Uri file) => localStorage.DeleteFile(file));
       storage.Setup(self => self.EnumerateFiles(It.IsAny<Uri>()))
              .Returns((Uri dir) => localStorage.EnumerateFiles(dir));
+      storage.Setup(self => self.EnumerateDirectories(It.IsAny<Uri>()))
+             .Returns((Uri dir) => localStorage.EnumerateDirectories(dir));
       storage.Setup(self => self.GetSignature(It.IsAny<Uri>()))
              .Returns((Uri file) => localStorage.GetSignature(file));
     }
@@ -79,9 +81,9 @@ namespace Bud {
 
     [Test]
     public void CopyDir_from_multiple_source_directories() {
-      var sourceDir2 = new Uri(dir.CreatePath("source2"));
-      var barSrc2File = new Uri(dir.CreateFile("bar", "source2", "bar.txt"));
-      var barTargetFile = new Uri(dir.CreatePath("target", "bar.txt"));
+      var sourceDir2 = CreatePath("source2");
+      var barSrc2File = CreateFile("bar", "source2", "bar.txt");
+      var barTargetFile = CreatePath("target", "bar.txt");
 
       CopyDir(new[] {sourceDir, sourceDir2}, targetDir);
 
@@ -91,7 +93,7 @@ namespace Bud {
 
     [Test]
     public void CopyDir_conflicting_files() {
-      var sourceDir2 = new Uri(dir.CreateDir("sources2"));
+      var sourceDir2 = CreateDir("sources2");
       dir.CreateFile("foo2", "sources2", "foo.txt");
 
       var exception = Assert.Throws<Exception>(() => CopyDir(new[] {sourceDir, sourceDir2}, targetDir));
@@ -99,5 +101,17 @@ namespace Bud {
                       $"to '{targetDir.AbsolutePath}/'. Both source directories contain file 'foo.txt'.",
                       exception.Message);
     }
+
+    [Test]
+    public void CopyDir_subdirectories() {
+      var nestedSrcFile = CreateFile("42", "source", "bar", "baz.txt");
+      var nestedTargetFile = CreatePath("target", "bar", "baz.txt");
+      CopyDir(sourceDir, targetDir);
+      FileAssert.AreEqual(nestedSrcFile.AbsolutePath, nestedTargetFile.AbsolutePath);
+    }
+
+    private Uri CreatePath(params string[] subPath) => new Uri(dir.CreatePath(subPath));
+    private Uri CreateDir(params string[] subDir) => new Uri(dir.CreateDir(subDir));
+    private Uri CreateFile(string contents, params string[] subPath) => new Uri(dir.CreateFile(contents, subPath));
   }
 }
