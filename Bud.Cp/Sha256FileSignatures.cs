@@ -6,9 +6,7 @@ namespace Bud {
   public class Sha256FileSignatures {
     private readonly byte[] buffer = new byte[16384];
 
-    public byte[] GetSignature(Uri file) => DigestFile(file, buffer);
-
-    private static byte[] DigestFile(Uri file, byte[] buffer) {
+    public byte[] GetSignature(Uri file) {
       var hashAlgorithm = SHA256.Create();
       hashAlgorithm.Initialize();
       using (var fileStream = File.OpenRead(file.AbsolutePath)) {
