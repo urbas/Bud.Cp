@@ -1,16 +1,17 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Security.Cryptography;
 
 namespace Bud {
-  public class Sha256FileSignatures : IFileSignatures {
+  public class Sha256FileSignatures {
     private readonly byte[] buffer = new byte[16384];
 
-    public byte[] GetSignature(string file) => DigestFile(file, buffer);
+    public byte[] GetSignature(Uri file) => DigestFile(file, buffer);
 
-    private static byte[] DigestFile(string file, byte[] buffer) {
+    private static byte[] DigestFile(Uri file, byte[] buffer) {
       var hashAlgorithm = SHA256.Create();
       hashAlgorithm.Initialize();
-      using (var fileStream = File.OpenRead(file)) {
+      using (var fileStream = File.OpenRead(file.AbsolutePath)) {
         int readBytes;
         do {
           readBytes = fileStream.Read(buffer, 0, buffer.Length);

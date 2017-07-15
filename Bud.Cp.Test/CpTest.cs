@@ -7,11 +7,11 @@ using static Bud.Cp;
 namespace Bud {
   public class CpTest {
     private TmpDir dir;
-    private Mock<Action<string, string>> copyMock;
-    private string sourceDir;
-    private string fooSrcFile;
-    private string fooTargetFile;
-    private string targetDir;
+    private Mock<FileCopy> copyMock;
+    private Uri sourceDir;
+    private Uri fooSrcFile;
+    private Uri fooTargetFile;
+    private Uri targetDir;
 
     [SetUp]
     public void SetUp() {
@@ -23,21 +23,21 @@ namespace Bud {
       targetDir = ToUri(dir.CreatePath("target"));
       fooTargetFile = ToUri(dir.CreatePath("target", "foo.txt"));
 
-      copyMock = new Mock<Action<string, string>>();
-      copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
-              .Callback((string sourceFile, string targetFile) => CopyFile(sourceFile, targetFile));
+      copyMock = new Mock<FileCopy>();
+      copyMock.Setup(self => self(It.IsAny<Uri>(), It.IsAny<Uri>()))
+              .Callback((Uri sourceFile, Uri targetFile) => LocalFileCopy(sourceFile, targetFile));
     }
 
     [TearDown]
     public void TearDown() => dir.Dispose();
 
     [Test]
-    public void CopyDir_no_sources() => Assert.DoesNotThrow(() => CopyDir($"{dir}/invalid_dir", targetDir));
+    public void CopyDir_no_sources() => Assert.DoesNotThrow(() => CopyDir(new Uri($"{dir}/invalid_dir"), targetDir));
 
     [Test]
     public void CopyDir_initial_copy() {
       CopyDir(sourceDir, targetDir);
-      FileAssert.AreEqual(fooSrcFile, fooTargetFile);
+      FileAssert.AreEqual(fooSrcFile.AbsolutePath, fooTargetFile.AbsolutePath);
     }
 
     [Test]
@@ -50,7 +50,7 @@ namespace Bud {
     [Test]
     public void CopyDir_overwrite_if_modified() {
       CopyDir(sourceDir, targetDir, copyMock.Object);
-      File.WriteAllText(fooSrcFile, "foo v2");
+      File.WriteAllText(fooSrcFile.AbsolutePath, "foo v2");
       CopyDir(sourceDir, targetDir, copyMock.Object);
       copyMock.Verify(s => s(fooSrcFile, fooTargetFile), Times.Exactly(2));
     }
@@ -58,21 +58,21 @@ namespace Bud {
     [Test]
     public void CopyDir_remove_deleted_files() {
       CopyDir(sourceDir, targetDir, copyMock.Object);
-      File.Delete(fooSrcFile);
+      File.Delete(fooSrcFile.AbsolutePath);
       CopyDir(sourceDir, targetDir, copyMock.Object);
-      FileAssert.DoesNotExist(fooTargetFile);
+      FileAssert.DoesNotExist(fooTargetFile.AbsolutePath);
     }
 
     [Test]
     public void CopyDir_from_multiple_source_directories() {
-      var sourceDir2 = dir.CreatePath("source2");
-      var barSrc2File = dir.CreateFile("bar", "source2", "bar.txt");
-      var barTargetFile = dir.CreatePath("target", "bar.txt");
+      var sourceDir2 = new Uri(dir.CreatePath("source2"));
+      var barSrc2File = new Uri(dir.CreateFile("bar", "source2", "bar.txt"));
+      var barTargetFile = new Uri(dir.CreatePath("target", "bar.txt"));
 
       CopyDir(new[] {sourceDir, sourceDir2}, targetDir);
 
-      FileAssert.AreEqual(fooSrcFile, fooTargetFile);
-      FileAssert.AreEqual(barSrc2File, barTargetFile);
+      FileAssert.AreEqual(fooSrcFile.AbsolutePath, fooTargetFile.AbsolutePath);
+      FileAssert.AreEqual(barSrc2File.AbsolutePath, barTargetFile.AbsolutePath);
     }
 
     [Test]
@@ -81,22 +81,22 @@ namespace Bud {
       dir.CreateFile("foo2", "sources2", "foo.txt");
 
       var exception = Assert.Throws<Exception>(() => CopyDir(new[] {sourceDir, sourceDir2}, targetDir));
-      Assert.AreEqual($"Could not copy directories '{sourceDir}/' and '{sourceDir2}/' to '{targetDir}/'. Both " +
-                      $"directories contain file 'foo.txt'.",
+      Assert.AreEqual($"Could not copy directories '{sourceDir.AbsolutePath}/' and '{sourceDir2.AbsolutePath}/' " +
+                      $"to '{targetDir.AbsolutePath}/'. Both source directories contain file 'foo.txt'.",
                       exception.Message);
     }
 
     [Test]
     public void CopyDir_uses_custom_file_signatures() {
-      var fileSignaturesMock = new Mock<IFileSignatures>();
+      var fileSignaturesMock = new Mock<FileSignature>();
 
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
 
-      fileSignaturesMock.Verify(self => self.GetSignature(fooSrcFile), Times.Once);
-      fileSignaturesMock.Verify(self => self.GetSignature(fooTargetFile), Times.Once);
+      fileSignaturesMock.Verify(self => self(fooSrcFile), Times.Once);
+      fileSignaturesMock.Verify(self => self(fooTargetFile), Times.Once);
     }
 
-    private static string ToUri(string path) => new Uri(path).AbsolutePath;
+    private static Uri ToUri(string path) => new Uri(path);
   }
 }

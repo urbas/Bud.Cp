@@ -5,12 +5,16 @@ using System.Linq;
 using static System.IO.Directory;
 
 namespace Bud {
+  public delegate void FileCopy(Uri sourceFile, Uri targetFile);
+
+  public delegate byte[] FileSignature(Uri file);
+
   public static class Cp {
-    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir,
-                               Action<string, string> copyFunction = null, IFileSignatures fileSignatures = null) {
-      copyFunction = copyFunction ?? CopyFile;
-      fileSignatures = fileSignatures ?? new Sha256FileSignatures();
-      CreateDirectory(targetDir);
+    public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir,
+                               FileCopy fileCopy = null, FileSignature fileSignatures = null) {
+      fileCopy = fileCopy ?? LocalFileCopy;
+      fileSignatures = fileSignatures ?? new Sha256FileSignatures().GetSignature;
+      CreateDirectory(targetDir.AbsolutePath);
 
       var targetDirUri = new Uri(targetDir + "/");
       var targetRelPaths = GetRelPaths(targetDirUri);
@@ -20,10 +24,25 @@ namespace Bud {
 
       AssertNoConflicts(sourceRelPaths, targetDirUri);
 
-      CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction);
-      OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction, fileSignatures);
+      CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, fileCopy);
+      OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, fileCopy, fileSignatures);
       DeleteExtraneousFiles(sourceRelPaths, targetDirUri, targetRelPaths);
     }
+
+    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir,
+                               FileCopy fileCopy = null, FileSignature fileSignatures = null)
+      => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), fileCopy, fileSignatures);
+
+    public static void CopyDir(string sourceDir, string targetDir, FileCopy fileCopy = null,
+                               FileSignature fileSignatures = null)
+      => CopyDir(new Uri(sourceDir), new Uri(targetDir), fileCopy, fileSignatures);
+
+    public static void CopyDir(Uri sourceDir, Uri targetDir, FileCopy fileCopy = null,
+                               FileSignature fileSignatures = null)
+      => CopyDir(new[] {sourceDir}, targetDir, fileCopy, fileSignatures);
+
+    internal static void LocalFileCopy(Uri sourcefile, Uri targetfile)
+      => File.Copy(sourcefile.AbsolutePath, targetfile.AbsolutePath, overwrite: true);
 
     private static void AssertNoConflicts(List<Tuple<Uri, HashSet<Uri>>> sourceRelPaths, Uri targetDir) {
       var relPath2SrcDir = new Dictionary<Uri, Uri>();
@@ -32,46 +51,41 @@ namespace Bud {
           Uri srcDir;
           if (relPath2SrcDir.TryGetValue(relPath, out srcDir)) {
             throw new Exception($"Could not copy directories '{srcDir.AbsolutePath}' and " +
-                                $"'{abs2RelPath.Item1.AbsolutePath}' to '{targetDir.AbsolutePath}'. Both directories contain " +
-                                $"file '{relPath}'.");
+                                $"'{abs2RelPath.Item1.AbsolutePath}' to '{targetDir.AbsolutePath}'. " +
+                                $"Both source directories contain file '{relPath}'.");
           }
           relPath2SrcDir.Add(relPath, abs2RelPath.Item1);
         }
       }
     }
 
-    public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null,
-                               IFileSignatures fileSignatures = null)
-      => CopyDir(new[] {sourceDir}, targetDir, copyFunction, fileSignatures);
-
     private static void CopyMissingFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceRelPaths, Uri targetDir,
-                                         HashSet<Uri> targetRelPaths, Action<string, string> copyFunction) {
+                                         HashSet<Uri> targetRelPaths, FileCopy fileCopy) {
       foreach (var dir2RelPaths in sourceRelPaths) {
         foreach (var relPathToCopy in dir2RelPaths.Item2.Except(targetRelPaths)) {
           var sourceAbsPath = new Uri(dir2RelPaths.Item1, relPathToCopy);
           var targetAbsPath = new Uri(targetDir, relPathToCopy);
-          copyFunction(sourceAbsPath.AbsolutePath, targetAbsPath.AbsolutePath);
+          fileCopy(sourceAbsPath, targetAbsPath);
         }
       }
     }
 
     private static void OverwriteExistingFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceDirs2RelPaths,
                                                Uri targetDir, HashSet<Uri> targetRelPaths,
-                                               Action<string, string> copyFunction, IFileSignatures fileSignatures) {
+                                               FileCopy fileCopy, FileSignature fileSignatures) {
       foreach (var dir2RelPaths in sourceDirs2RelPaths) {
         foreach (var relPathToOverwrite in dir2RelPaths.Item2.Intersect(targetRelPaths)) {
           var sourceAbsPath = new Uri(dir2RelPaths.Item1, relPathToOverwrite);
           var targetAbsPath = new Uri(targetDir, relPathToOverwrite);
           if (!FileSignaturesEqual(fileSignatures, sourceAbsPath, targetAbsPath)) {
-            copyFunction(sourceAbsPath.AbsolutePath, targetAbsPath.AbsolutePath);
+            fileCopy(sourceAbsPath, targetAbsPath);
           }
         }
       }
     }
 
-    private static bool FileSignaturesEqual(IFileSignatures fileSignatures, Uri sourceAbsPath, Uri targetAbsPath)
-      => fileSignatures.GetSignature(sourceAbsPath.AbsolutePath)
-                       .SequenceEqual(fileSignatures.GetSignature(targetAbsPath.AbsolutePath));
+    private static bool FileSignaturesEqual(FileSignature fileSignature, Uri sourceAbsPath, Uri targetAbsPath)
+      => fileSignature(sourceAbsPath).SequenceEqual(fileSignature(targetAbsPath));
 
     private static void DeleteExtraneousFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceRelPaths,
                                               Uri targetDir, HashSet<Uri> targetRelPaths) {
@@ -91,8 +105,5 @@ namespace Bud {
 
     private static Uri ToRelPath(Uri basePath, string absPath)
       => basePath.MakeRelativeUri(new Uri(absPath));
-
-    internal static void CopyFile(string sourceFile, string targetFile)
-      => File.Copy(sourceFile, targetFile, overwrite: true);
   }
 }
