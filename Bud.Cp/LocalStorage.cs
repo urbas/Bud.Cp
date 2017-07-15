@@ -23,8 +23,8 @@ namespace Bud {
       => File.Copy(sourceFile.AbsolutePath, targetFile.AbsolutePath, overwrite: true);
 
     public byte[] GetSignature(Uri file) => fileSignatures.GetSignature(file);
-
     public void DeleteFile(Uri file) => File.Delete(file.AbsolutePath);
+    public void DeleteDirectory(Uri dir) => Directory.Delete(dir.AbsolutePath);
 
     public IEnumerable<Uri> EnumerateDirectories(Uri dir)
       => Directory.Exists(dir.AbsolutePath)

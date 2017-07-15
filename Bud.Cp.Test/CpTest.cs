@@ -31,6 +31,8 @@ namespace Bud {
              .Callback((Uri dir) => localStorage.CreateDirectory(dir));
       storage.Setup(self => self.DeleteFile(It.IsAny<Uri>()))
              .Callback((Uri file) => localStorage.DeleteFile(file));
+      storage.Setup(self => self.DeleteDirectory(It.IsAny<Uri>()))
+             .Callback((Uri dir) => localStorage.DeleteDirectory(dir));
       storage.Setup(self => self.EnumerateFiles(It.IsAny<Uri>()))
              .Returns((Uri dir) => localStorage.EnumerateFiles(dir));
       storage.Setup(self => self.EnumerateDirectories(It.IsAny<Uri>()))
@@ -69,6 +71,7 @@ namespace Bud {
       File.WriteAllText(fooSrcFile.AbsolutePath, "foo v2");
       CopyDir(sourceDir, targetDir, storage.Object);
       storage.Verify(s => s.CopyFile(fooSrcFile, fooTargetFile), Times.Exactly(2));
+      FileAssert.AreEqual(fooSrcFile.AbsolutePath, fooTargetFile.AbsolutePath);
     }
 
     [Test]
@@ -108,6 +111,16 @@ namespace Bud {
       var nestedTargetFile = CreatePath("target", "bar", "baz.txt");
       CopyDir(sourceDir, targetDir);
       FileAssert.AreEqual(nestedSrcFile.AbsolutePath, nestedTargetFile.AbsolutePath);
+    }
+
+    [Test]
+    public void CopyDir_delete_removed_subdirectories() {
+      var sourceSubDir = CreateDir("source", "bar");
+      var targetSubDir = CreatePath("target", "bar");
+      CopyDir(sourceDir, targetDir);
+      Directory.Delete(sourceSubDir.AbsolutePath);
+      CopyDir(sourceDir, targetDir);
+      DirectoryAssert.DoesNotExist(targetSubDir.AbsolutePath);
     }
 
     private Uri CreatePath(params string[] subPath) => new Uri(dir.CreatePath(subPath));

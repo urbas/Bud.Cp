@@ -6,35 +6,35 @@ namespace Bud {
   public static class Cp {
     public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null) {
       storage = storage ?? new LocalStorage();
-      targetDir = targetDir.AbsolutePath.EndsWith("/") ? targetDir : new Uri(targetDir + "/");
-      
+      targetDir = AppendSlash(targetDir);
+
       storage.CreateDirectory(targetDir);
-      
-      var targetRelUris = GetRelPaths(storage, targetDir);
-      var sourceDirUris = sourceDirs.Select(sourceDir => new Uri(sourceDir + "/")).ToList();
-      var sourceRelUris = sourceDirUris.Select(sourceDir => GetRelPaths(storage, sourceDir)).ToList();
-      
-      AssertNoConflicts(sourceDirUris, sourceRelUris, targetDir);
-      
+
+      var sourceDirUris = sourceDirs.Select(AppendSlash).ToList();
       SyncDirectories(sourceDirUris, targetDir, storage);
+
+      var sourceRelUris = sourceDirUris.Select(sourceDir => GetRelPaths(storage, sourceDir)).ToList();
+      AssertNoConflicts(sourceDirUris, sourceRelUris, targetDir);
+
+      var targetRelUris = GetRelPaths(storage, targetDir);
       CopyMissingFiles(sourceDirUris, sourceRelUris, targetDir, targetRelUris, storage);
       OverwriteExistingFiles(sourceDirUris, sourceRelUris, targetDir, targetRelUris, storage);
       DeleteExtraneousFiles(sourceRelUris, targetDir, targetRelUris, storage);
     }
 
-    private static void SyncDirectories(IEnumerable<Uri> sourceDirUris, Uri targetDir, IStorage storage) {
-      var srcSubDirs = sourceDirUris.Aggregate(new HashSet<Uri>(),
-                                               (allSubDirs, sourceDirUri) => {
-                                                 allSubDirs.UnionWith(GetSubdirs(storage, sourceDirUri));
-                                                 return allSubDirs;
-                                               });
-      foreach (var subDir in srcSubDirs) {
-        storage.CreateDirectory(new Uri(targetDir, subDir));
-      }
-    }
-
     public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null)
       => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), storage);
+
+    private static void SyncDirectories(IEnumerable<Uri> sourceDirUris, Uri targetDir, IStorage storage) {
+      var sourceSubDirs = sourceDirUris.Aggregate(new HashSet<Uri>(),
+                                                  (allSubDirs, sourceDirUri) => {
+                                                    allSubDirs.UnionWith(GetSubdirs(storage, sourceDirUri));
+                                                    return allSubDirs;
+                                                  });
+      var targetSubDirs = new HashSet<Uri>(GetSubdirs(storage, targetDir));
+      DeleteExtraneousSubDirs(storage, targetDir, targetSubDirs, sourceSubDirs);
+      CreateMissingSubDirs(storage, targetDir, targetSubDirs, sourceSubDirs);
+    }
 
     public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null)
       => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage);
@@ -64,10 +64,20 @@ namespace Bud {
       for (var dirIndex = 0; dirIndex < sourceDirUris.Count; dirIndex++) {
         var sourceDirUri = sourceDirUris[dirIndex];
         var srcFilesRelPaths = sourceRelUris[dirIndex];
-        foreach (var relPathToCopy in srcFilesRelPaths.Except(targetRelUris)) {
-          var sourceAbsPath = new Uri(sourceDirUri, relPathToCopy);
-          var targetAbsPath = new Uri(targetDir, relPathToCopy);
-          storage.CopyFile(sourceAbsPath, targetAbsPath);
+        foreach (var relPathToCopy in srcFilesRelPaths) {
+          if (!targetRelUris.Contains(relPathToCopy)) {
+            var sourceAbsPath = new Uri(sourceDirUri, relPathToCopy);
+            var targetAbsPath = new Uri(targetDir, relPathToCopy);
+            storage.CopyFile(sourceAbsPath, targetAbsPath);
+          }
+        }
+      }
+    }
+
+    private static void CreateMissingSubDirs(IStorage storage, Uri targetDir, HashSet<Uri> targetSubDirs, HashSet<Uri> sourceSubDirs) {
+      foreach (var subDir in sourceSubDirs) {
+        if (!targetSubDirs.Contains(subDir)) {
+          storage.CreateDirectory(new Uri(targetDir, subDir));
         }
       }
     }
@@ -76,18 +86,17 @@ namespace Bud {
                                                Uri targetDir, HashSet<Uri> targetRelUris, IStorage storage) {
       for (var dirIndex = 0; dirIndex < sourceDirUris.Count; dirIndex++) {
         var sourceDirUri = sourceDirUris[dirIndex];
-        foreach (var relPathToOverwrite in sourceRelUris[dirIndex].Intersect(targetRelUris)) {
-          var sourceAbsPath = new Uri(sourceDirUri, relPathToOverwrite);
-          var targetAbsPath = new Uri(targetDir, relPathToOverwrite);
-          if (!FileSignaturesEqual(storage, sourceAbsPath, targetAbsPath)) {
-            storage.CopyFile(sourceAbsPath, targetAbsPath);
+        foreach (var relPathToOverwrite in sourceRelUris[dirIndex]) {
+          if (targetRelUris.Contains(relPathToOverwrite)) {
+            var sourceAbsPath = new Uri(sourceDirUri, relPathToOverwrite);
+            var targetAbsPath = new Uri(targetDir, relPathToOverwrite);
+            if (!FileSignaturesEqual(storage, sourceAbsPath, targetAbsPath)) {
+              storage.CopyFile(sourceAbsPath, targetAbsPath);
+            }
           }
         }
       }
     }
-
-    private static bool FileSignaturesEqual(IStorage storage, Uri sourceAbsPath, Uri targetAbsPath)
-      => storage.GetSignature(sourceAbsPath).SequenceEqual(storage.GetSignature(targetAbsPath));
 
     private static void DeleteExtraneousFiles(IEnumerable<HashSet<Uri>> sourceRelUris, Uri targetDir,
                                               HashSet<Uri> targetRelUris, IStorage storage) {
@@ -95,10 +104,26 @@ namespace Bud {
         aggregate.UnionWith(relPaths);
         return aggregate;
       });
-      foreach (var targetFileToDelete in targetRelUris.Except(allSourceRelPaths)) {
-        storage.DeleteFile(new Uri(targetDir, targetFileToDelete));
+      foreach (var targetFileToDelete in targetRelUris) {
+        if (!allSourceRelPaths.Contains(targetFileToDelete)) {
+          storage.DeleteFile(new Uri(targetDir, targetFileToDelete));
+        }
       }
     }
+
+    private static void DeleteExtraneousSubDirs(IStorage storage, Uri targetDir, HashSet<Uri> targetSubDirs, HashSet<Uri> sourceSubDirs) {
+      foreach (var subDir in targetSubDirs) {
+        if (!sourceSubDirs.Contains(subDir)) {
+          storage.DeleteDirectory(new Uri(targetDir, subDir));
+        }
+      }
+    }
+
+    private static bool FileSignaturesEqual(IStorage storage, Uri sourceAbsPath, Uri targetAbsPath)
+      => storage.GetSignature(sourceAbsPath).SequenceEqual(storage.GetSignature(targetAbsPath));
+
+    private static Uri AppendSlash(Uri targetDir)
+      => targetDir.AbsolutePath.EndsWith("/") ? targetDir : new Uri(targetDir + "/");
 
     private static HashSet<Uri> GetRelPaths(IStorage storage, Uri dir)
       => new HashSet<Uri>(storage.EnumerateFiles(dir).Select(dir.MakeRelativeUri));

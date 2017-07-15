@@ -9,5 +9,6 @@ namespace Bud {
     void CopyFile(Uri sourceFile, Uri targetFile);
     byte[] GetSignature(Uri file);
     void DeleteFile(Uri file);
+    void DeleteDirectory(Uri dir);
   }
 }
