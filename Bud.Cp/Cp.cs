@@ -7,11 +7,11 @@ using static System.IO.Directory;
 namespace Bud {
   public delegate void FileCopy(Uri sourceFile, Uri targetFile);
 
-  public delegate byte[] FileSignature(Uri file);
+  public delegate byte[] FileSignatures(Uri file);
 
   public static class Cp {
     public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir,
-                               FileCopy fileCopy = null, FileSignature fileSignatures = null) {
+                               FileCopy fileCopy = null, FileSignatures fileSignatures = null) {
       fileCopy = fileCopy ?? LocalFileCopy;
       fileSignatures = fileSignatures ?? new Sha256FileSignatures().GetSignature;
       CreateDirectory(targetDir.AbsolutePath);
@@ -30,15 +30,15 @@ namespace Bud {
     }
 
     public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir,
-                               FileCopy fileCopy = null, FileSignature fileSignatures = null)
+                               FileCopy fileCopy = null, FileSignatures fileSignatures = null)
       => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), fileCopy, fileSignatures);
 
     public static void CopyDir(string sourceDir, string targetDir, FileCopy fileCopy = null,
-                               FileSignature fileSignatures = null)
+                               FileSignatures fileSignatures = null)
       => CopyDir(new Uri(sourceDir), new Uri(targetDir), fileCopy, fileSignatures);
 
     public static void CopyDir(Uri sourceDir, Uri targetDir, FileCopy fileCopy = null,
-                               FileSignature fileSignatures = null)
+                               FileSignatures fileSignatures = null)
       => CopyDir(new[] {sourceDir}, targetDir, fileCopy, fileSignatures);
 
     internal static void LocalFileCopy(Uri sourcefile, Uri targetfile)
@@ -72,7 +72,7 @@ namespace Bud {
 
     private static void OverwriteExistingFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceDirs2RelPaths,
                                                Uri targetDir, HashSet<Uri> targetRelPaths,
-                                               FileCopy fileCopy, FileSignature fileSignatures) {
+                                               FileCopy fileCopy, FileSignatures fileSignatures) {
       foreach (var dir2RelPaths in sourceDirs2RelPaths) {
         foreach (var relPathToOverwrite in dir2RelPaths.Item2.Intersect(targetRelPaths)) {
           var sourceAbsPath = new Uri(dir2RelPaths.Item1, relPathToOverwrite);
@@ -84,8 +84,8 @@ namespace Bud {
       }
     }
 
-    private static bool FileSignaturesEqual(FileSignature fileSignature, Uri sourceAbsPath, Uri targetAbsPath)
-      => fileSignature(sourceAbsPath).SequenceEqual(fileSignature(targetAbsPath));
+    private static bool FileSignaturesEqual(FileSignatures fileSignatures, Uri sourceAbsPath, Uri targetAbsPath)
+      => fileSignatures(sourceAbsPath).SequenceEqual(fileSignatures(targetAbsPath));
 
     private static void DeleteExtraneousFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceRelPaths,
                                               Uri targetDir, HashSet<Uri> targetRelPaths) {

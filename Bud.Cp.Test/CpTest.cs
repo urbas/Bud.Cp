@@ -88,7 +88,7 @@ namespace Bud {
 
     [Test]
     public void CopyDir_uses_custom_file_signatures() {
-      var fileSignaturesMock = new Mock<FileSignature>();
+      var fileSignaturesMock = new Mock<FileSignatures>();
 
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
