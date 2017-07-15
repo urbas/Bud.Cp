@@ -1,48 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using static System.IO.Directory;
 
 namespace Bud {
-  public delegate void FileCopy(Uri sourceFile, Uri targetFile);
-
-  public delegate byte[] FileSignatures(Uri file);
-
   public static class Cp {
-    public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir,
-                               FileCopy fileCopy = null, FileSignatures fileSignatures = null) {
-      fileCopy = fileCopy ?? LocalFileCopy;
-      fileSignatures = fileSignatures ?? new Sha256FileSignatures().GetSignature;
-      CreateDirectory(targetDir.AbsolutePath);
-
+    public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null) {
+      storage = storage ?? new LocalStorage();
+      storage.CreateDirectory(targetDir);
       var targetDirUri = new Uri(targetDir + "/");
-      var targetRelPaths = GetRelPaths(targetDirUri);
+      var targetRelPaths = GetRelPaths(storage, targetDirUri);
       var sourceRelPaths = sourceDirs.Select(sourceDir => new Uri(sourceDir + "/"))
-                                     .Select(sourceDir => Tuple.Create(sourceDir, GetRelPaths(sourceDir)))
+                                     .Select(sourceDir => Tuple.Create(sourceDir, GetRelPaths(storage, sourceDir)))
                                      .ToList();
-
       AssertNoConflicts(sourceRelPaths, targetDirUri);
-
-      CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, fileCopy);
-      OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, fileCopy, fileSignatures);
-      DeleteExtraneousFiles(sourceRelPaths, targetDirUri, targetRelPaths);
+      CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, storage);
+      OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, storage);
+      DeleteExtraneousFiles(sourceRelPaths, targetDirUri, targetRelPaths, storage);
     }
 
-    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir,
-                               FileCopy fileCopy = null, FileSignatures fileSignatures = null)
-      => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), fileCopy, fileSignatures);
+    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null)
+      => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), storage);
 
-    public static void CopyDir(string sourceDir, string targetDir, FileCopy fileCopy = null,
-                               FileSignatures fileSignatures = null)
-      => CopyDir(new Uri(sourceDir), new Uri(targetDir), fileCopy, fileSignatures);
+    public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null)
+      => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage);
 
-    public static void CopyDir(Uri sourceDir, Uri targetDir, FileCopy fileCopy = null,
-                               FileSignatures fileSignatures = null)
-      => CopyDir(new[] {sourceDir}, targetDir, fileCopy, fileSignatures);
-
-    internal static void LocalFileCopy(Uri sourcefile, Uri targetfile)
-      => File.Copy(sourcefile.AbsolutePath, targetfile.AbsolutePath, overwrite: true);
+    public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null)
+      => CopyDir(new[] {sourceDir}, targetDir, storage);
 
     private static void AssertNoConflicts(List<Tuple<Uri, HashSet<Uri>>> sourceRelPaths, Uri targetDir) {
       var relPath2SrcDir = new Dictionary<Uri, Uri>();
@@ -60,50 +43,44 @@ namespace Bud {
     }
 
     private static void CopyMissingFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceRelPaths, Uri targetDir,
-                                         HashSet<Uri> targetRelPaths, FileCopy fileCopy) {
+                                         HashSet<Uri> targetRelPaths, IStorage storage) {
       foreach (var dir2RelPaths in sourceRelPaths) {
         foreach (var relPathToCopy in dir2RelPaths.Item2.Except(targetRelPaths)) {
           var sourceAbsPath = new Uri(dir2RelPaths.Item1, relPathToCopy);
           var targetAbsPath = new Uri(targetDir, relPathToCopy);
-          fileCopy(sourceAbsPath, targetAbsPath);
+          storage.CopyFile(sourceAbsPath, targetAbsPath);
         }
       }
     }
 
     private static void OverwriteExistingFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceDirs2RelPaths,
-                                               Uri targetDir, HashSet<Uri> targetRelPaths,
-                                               FileCopy fileCopy, FileSignatures fileSignatures) {
+                                               Uri targetDir, HashSet<Uri> targetRelPaths, IStorage storage) {
       foreach (var dir2RelPaths in sourceDirs2RelPaths) {
         foreach (var relPathToOverwrite in dir2RelPaths.Item2.Intersect(targetRelPaths)) {
           var sourceAbsPath = new Uri(dir2RelPaths.Item1, relPathToOverwrite);
           var targetAbsPath = new Uri(targetDir, relPathToOverwrite);
-          if (!FileSignaturesEqual(fileSignatures, sourceAbsPath, targetAbsPath)) {
-            fileCopy(sourceAbsPath, targetAbsPath);
+          if (!FileSignaturesEqual(storage, sourceAbsPath, targetAbsPath)) {
+            storage.CopyFile(sourceAbsPath, targetAbsPath);
           }
         }
       }
     }
 
-    private static bool FileSignaturesEqual(FileSignatures fileSignatures, Uri sourceAbsPath, Uri targetAbsPath)
-      => fileSignatures(sourceAbsPath).SequenceEqual(fileSignatures(targetAbsPath));
+    private static bool FileSignaturesEqual(IStorage storage, Uri sourceAbsPath, Uri targetAbsPath)
+      => storage.GetSignature(sourceAbsPath).SequenceEqual(storage.GetSignature(targetAbsPath));
 
     private static void DeleteExtraneousFiles(IEnumerable<Tuple<Uri, HashSet<Uri>>> sourceRelPaths,
-                                              Uri targetDir, HashSet<Uri> targetRelPaths) {
+                                              Uri targetDir, HashSet<Uri> targetRelPaths, IStorage storage) {
       var allSourceRelPaths = sourceRelPaths.Aggregate(new HashSet<Uri>(), (aggregate, sourceDir2RelPaths) => {
         aggregate.UnionWith(sourceDir2RelPaths.Item2);
         return aggregate;
       });
       foreach (var targetFileToDelete in targetRelPaths.Except(allSourceRelPaths)) {
-        File.Delete(new Uri(targetDir, targetFileToDelete).AbsolutePath);
+        storage.DeleteFile(new Uri(targetDir, targetFileToDelete));
       }
     }
 
-    private static HashSet<Uri> GetRelPaths(Uri dir) {
-      var absPaths = Exists(dir.AbsolutePath) ? EnumerateFiles(dir.AbsolutePath) : Enumerable.Empty<string>();
-      return new HashSet<Uri>(absPaths.Select(absPath => ToRelPath(dir, absPath)));
-    }
-
-    private static Uri ToRelPath(Uri basePath, string absPath)
-      => basePath.MakeRelativeUri(new Uri(absPath));
+    private static HashSet<Uri> GetRelPaths(IStorage storage, Uri dir)
+      => new HashSet<Uri>(storage.EnumerateFiles(dir).Select(dir.MakeRelativeUri));
   }
 }
