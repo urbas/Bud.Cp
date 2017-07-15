@@ -16,13 +16,13 @@ namespace Bud {
     [SetUp]
     public void SetUp() {
       dir = new TmpDir();
-      
-      sourceDir = dir.CreatePath("source");
+
+      sourceDir = ToUri(dir.CreatePath("source"));
       fooSrcFile = ToUri(dir.CreateFile("foo", "source", "foo.txt"));
-      
-      targetDir = dir.CreatePath("target");
+
+      targetDir = ToUri(dir.CreatePath("target"));
       fooTargetFile = ToUri(dir.CreatePath("target", "foo.txt"));
-      
+
       copyMock = new Mock<Action<string, string>>();
       copyMock.Setup(self => self(It.IsAny<string>(), It.IsAny<string>()))
               .Callback((string sourceFile, string targetFile) => CopyFile(sourceFile, targetFile));
@@ -68,24 +68,35 @@ namespace Bud {
       var sourceDir2 = dir.CreatePath("source2");
       var barSrc2File = dir.CreateFile("bar", "source2", "bar.txt");
       var barTargetFile = dir.CreatePath("target", "bar.txt");
-      
-      CopyDir(new []{sourceDir, sourceDir2}, targetDir);
-      
+
+      CopyDir(new[] {sourceDir, sourceDir2}, targetDir);
+
       FileAssert.AreEqual(fooSrcFile, fooTargetFile);
       FileAssert.AreEqual(barSrc2File, barTargetFile);
     }
 
     [Test]
-    public void CopyDir_overwrite_uses_custom_file_signatures() {
+    public void CopyDir_conflicting_files() {
+      var sourceDir2 = ToUri(dir.CreateDir("sources2"));
+      dir.CreateFile("foo2", "sources2", "foo.txt");
+
+      var exception = Assert.Throws<Exception>(() => CopyDir(new[] {sourceDir, sourceDir2}, targetDir));
+      Assert.AreEqual($"Could not copy directories '{sourceDir}/' and '{sourceDir2}/' to '{targetDir}/'. Both " +
+                      $"directories contain file 'foo.txt'.",
+                      exception.Message);
+    }
+
+    [Test]
+    public void CopyDir_uses_custom_file_signatures() {
       var fileSignaturesMock = new Mock<IFileSignatures>();
-      
+
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
       CopyDir(sourceDir, targetDir, fileSignatures: fileSignaturesMock.Object);
-      
+
       fileSignaturesMock.Verify(self => self.GetSignature(fooSrcFile), Times.Once);
       fileSignaturesMock.Verify(self => self.GetSignature(fooTargetFile), Times.Once);
     }
-    
+
     private static string ToUri(string path) => new Uri(path).AbsolutePath;
   }
 }

@@ -18,9 +18,26 @@ namespace Bud {
                                      .Select(sourceDir => Tuple.Create(sourceDir, GetRelPaths(sourceDir)))
                                      .ToList();
 
+      AssertNoConflicts(sourceRelPaths, targetDirUri);
+
       CopyMissingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction);
       OverwriteExistingFiles(sourceRelPaths, targetDirUri, targetRelPaths, copyFunction, fileSignatures);
       DeleteExtraneousFiles(sourceRelPaths, targetDirUri, targetRelPaths);
+    }
+
+    private static void AssertNoConflicts(List<Tuple<Uri, HashSet<Uri>>> sourceRelPaths, Uri targetDir) {
+      var relPath2SrcDir = new Dictionary<Uri, Uri>();
+      foreach (var abs2RelPath in sourceRelPaths) {
+        foreach (var relPath in abs2RelPath.Item2) {
+          Uri srcDir;
+          if (relPath2SrcDir.TryGetValue(relPath, out srcDir)) {
+            throw new Exception($"Could not copy directories '{srcDir.AbsolutePath}' and " +
+                                $"'{abs2RelPath.Item1.AbsolutePath}' to '{targetDir.AbsolutePath}'. Both directories contain " +
+                                $"file '{relPath}'.");
+          }
+          relPath2SrcDir.Add(relPath, abs2RelPath.Item1);
+        }
+      }
     }
 
     public static void CopyDir(string sourceDir, string targetDir, Action<string, string> copyFunction = null,
