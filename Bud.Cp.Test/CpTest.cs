@@ -41,7 +41,10 @@ namespace Bud {
     public void TearDown() => dir.Dispose();
 
     [Test]
-    public void CopyDir_no_sources() => Assert.DoesNotThrow(() => CopyDir(new Uri($"{dir}/invalid_dir"), targetDir));
+    public void CopyDir_no_sources() {
+      CopyDir(new Uri($"{dir}/invalid_dir"), targetDir);
+      DirectoryAssert.Exists(targetDir.AbsolutePath);
+    }
 
     [Test]
     public void CopyDir_initial_copy() {
