@@ -31,9 +31,11 @@ Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
 Warning: This will delete files in the target directory that no longer exist in the source directory.
 
 
-### Use your own file signatures
+### Use your own storage scheme
+
+With the `storage` parameter you can convince `Bud.Cp.CopyDirs` to copy all kinds of resources:
 
 ```csharp
-Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
-Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir", fileSignatures: new MyFileSignatures());
+Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir", storage: new MyWebStorage());
+Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir", storage: new MyWebStorage());
 ```
