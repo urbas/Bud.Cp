@@ -16,29 +16,11 @@ namespace Bud {
     [SetUp]
     public void SetUp() {
       dir = new TmpDir();
-
       sourceDir = CreatePath("source");
       fooSrcFile = CreateFile("foo", "source", "foo.txt");
-
       targetDir = CreatePath("target");
       fooTargetFile = CreatePath("target", "foo.txt");
-
-      storage = new Mock<IStorage>();
-      var localStorage = new LocalStorage();
-      storage.Setup(self => self.CopyFile(It.IsAny<Uri>(), It.IsAny<Uri>()))
-             .Callback((Uri sourceFile, Uri targetFile) => localStorage.CopyFile(sourceFile, targetFile));
-      storage.Setup(self => self.CreateDirectory(It.IsAny<Uri>()))
-             .Callback((Uri dir) => localStorage.CreateDirectory(dir));
-      storage.Setup(self => self.DeleteFile(It.IsAny<Uri>()))
-             .Callback((Uri file) => localStorage.DeleteFile(file));
-      storage.Setup(self => self.DeleteDirectory(It.IsAny<Uri>()))
-             .Callback((Uri dir) => localStorage.DeleteDirectory(dir));
-      storage.Setup(self => self.EnumerateFiles(It.IsAny<Uri>()))
-             .Returns((Uri dir) => localStorage.EnumerateFiles(dir));
-      storage.Setup(self => self.EnumerateDirectories(It.IsAny<Uri>()))
-             .Returns((Uri dir) => localStorage.EnumerateDirectories(dir));
-      storage.Setup(self => self.GetSignature(It.IsAny<Uri>()))
-             .Returns((Uri file) => localStorage.GetSignature(file));
+      storage = SpiedLocalStorage();
     }
 
     [TearDown]
@@ -126,5 +108,25 @@ namespace Bud {
     private Uri CreatePath(params string[] subPath) => new Uri(dir.CreatePath(subPath));
     private Uri CreateDir(params string[] subDir) => new Uri(dir.CreateDir(subDir));
     private Uri CreateFile(string contents, params string[] subPath) => new Uri(dir.CreateFile(contents, subPath));
+
+    private static Mock<IStorage> SpiedLocalStorage() {
+      var mockStorage = new Mock<IStorage>();
+      var localStorage = new LocalStorage();
+      mockStorage.Setup(self => self.CopyFile(It.IsAny<Uri>(), It.IsAny<Uri>()))
+                 .Callback((Uri sourceFile, Uri targetFile) => localStorage.CopyFile(sourceFile, targetFile));
+      mockStorage.Setup(self => self.CreateDirectory(It.IsAny<Uri>()))
+                 .Callback((Uri dir) => localStorage.CreateDirectory(dir));
+      mockStorage.Setup(self => self.DeleteFile(It.IsAny<Uri>()))
+                 .Callback((Uri file) => localStorage.DeleteFile(file));
+      mockStorage.Setup(self => self.DeleteDirectory(It.IsAny<Uri>()))
+                 .Callback((Uri dir) => localStorage.DeleteDirectory(dir));
+      mockStorage.Setup(self => self.EnumerateFiles(It.IsAny<Uri>()))
+                 .Returns((Uri dir) => localStorage.EnumerateFiles(dir));
+      mockStorage.Setup(self => self.EnumerateDirectories(It.IsAny<Uri>()))
+                 .Returns((Uri dir) => localStorage.EnumerateDirectories(dir));
+      mockStorage.Setup(self => self.GetSignature(It.IsAny<Uri>()))
+                 .Returns((Uri file) => localStorage.GetSignature(file));
+      return mockStorage;
+    }
   }
 }
