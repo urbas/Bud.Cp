@@ -3,7 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 
 namespace Bud {
-  public class Sha256FileSignatures {
+  internal class Sha256FileSignatures {
     private readonly byte[] buffer = new byte[16384];
 
     public byte[] GetSignature(Uri file) {

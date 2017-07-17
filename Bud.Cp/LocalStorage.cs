@@ -5,7 +5,7 @@ using System.Linq;
 using static System.IO.SearchOption;
 
 namespace Bud {
-  public class LocalStorage : IStorage {
+  internal class LocalStorage : IStorage {
     private readonly Sha256FileSignatures fileSignatures;
 
     public LocalStorage() {
@@ -19,16 +19,18 @@ namespace Bud {
            ? Directory.EnumerateFiles(dir.AbsolutePath, "*", AllDirectories).Select(path => new Uri(path))
            : Enumerable.Empty<Uri>();
 
-    public void CopyFile(Uri sourceFile, Uri targetFile)
-      => File.Copy(sourceFile.AbsolutePath, targetFile.AbsolutePath, overwrite: true);
-
-    public byte[] GetSignature(Uri file) => fileSignatures.GetSignature(file);
-    public void DeleteFile(Uri file) => File.Delete(file.AbsolutePath);
-    public void DeleteDirectory(Uri dir) => Directory.Delete(dir.AbsolutePath);
-
     public IEnumerable<Uri> EnumerateDirectories(Uri dir)
       => Directory.Exists(dir.AbsolutePath)
            ? Directory.EnumerateDirectories(dir.AbsolutePath, "*", AllDirectories).Select(path => new Uri(path))
            : Enumerable.Empty<Uri>();
+
+    public void CopyFile(Uri sourceFile, Uri targetFile)
+      => File.Copy(sourceFile.AbsolutePath, targetFile.AbsolutePath, overwrite: true);
+
+    public byte[] GetSignature(Uri file) => fileSignatures.GetSignature(file);
+
+    public void DeleteFile(Uri file) => File.Delete(file.AbsolutePath);
+
+    public void DeleteDirectory(Uri dir) => Directory.Delete(dir.AbsolutePath);
   }
 }

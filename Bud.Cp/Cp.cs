@@ -3,7 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Bud {
+  /// <summary>
+  /// Contains the entire API of Bud.Cp.
+  /// </summary>
   public static class Cp {
+    /// <summary>
+    ///   Copies source directories to a single target directory. The target directory will contain all files from the
+    ///   source directories combined and only those files.
+    /// </summary>
+    /// <param name="sourceDirs">URIs of the directories from which to copy files.</param>
+    /// <param name="targetDir">URI of the directory into which to copy files.</param>
+    /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <exception cref="Exception">thrown if the source directories contains files with the same name.</exception>
     public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null) {
       storage = storage ?? new LocalStorage();
       targetDir = AppendSlash(targetDir);
@@ -22,8 +33,39 @@ namespace Bud {
       DeleteExtraneousFiles(sourceRelUris, targetDir, targetRelUris, storage);
     }
 
+    /// <summary>
+    ///   Copies source directories to a single target directory. The target directory will contain all files from the
+    ///   source directories combined and only those files.
+    /// </summary>
+    /// <param name="sourceDirs">URIs of the directories from which to copy files.</param>
+    /// <param name="targetDir">URI of the directory into which to copy files.</param>
+    /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <remarks>this function delegates to
+    /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
     public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null)
       => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), storage);
+
+    /// <summary>
+    ///   Copies the source directory to a single target directory. The target directory will contain all files from the
+    ///   source directories combined and only those files.
+    /// </summary>
+    /// <param name="sourceDirs">URI of the directory from which to copy files.</param>
+    /// <param name="targetDir">URI of the directory into which to copy files.</param>
+    /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
+    public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null)
+      => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage);
+
+    /// <summary>
+    ///   Copies the source directory to a single target directory. The target directory will contain all files from the
+    ///   source directories combined and only those files.
+    /// </summary>
+    /// <param name="sourceDirs">URI of the directory from which to copy files.</param>
+    /// <param name="targetDir">URI of the directory into which to copy files.</param>
+    /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
+    public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null)
+      => CopyDir(new[] {sourceDir}, targetDir, storage);
 
     private static void SyncDirectories(IEnumerable<Uri> sourceDirUris, Uri targetDir, IStorage storage) {
       var sourceSubDirs = sourceDirUris.Aggregate(new HashSet<Uri>(),
@@ -35,12 +77,6 @@ namespace Bud {
       DeleteExtraneousSubDirs(storage, targetDir, targetSubDirs, sourceSubDirs);
       CreateMissingSubDirs(storage, targetDir, targetSubDirs, sourceSubDirs);
     }
-
-    public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null)
-      => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage);
-
-    public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null)
-      => CopyDir(new[] {sourceDir}, targetDir, storage);
 
     private static void AssertNoConflicts(List<Uri> sourceDirUris, List<HashSet<Uri>> sourceRelUris, Uri targetDir) {
       var relPath2SrcDir = new Dictionary<Uri, Uri>();
