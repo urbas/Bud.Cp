@@ -7,7 +7,9 @@
 
 `Bud.Cp` is a C# library for copying directories. The library uses SHA256 signatures to make incremental copies a bit speedier.
 
-Main idea behind `Bud.Cp` is that you can define your own file signatures system. This can be used by build systems to make incremental copying even faster. For example, a signature of a file might be calculated from the signature of the task that created the file instead of reading every byte of the file and calculating a cryptographic hash. To make incremental copies even faster build systems with immutable source directories and output directories can also persist signatures in a file.
+Main idea behind `Bud.Cp` is that you can define your own file storage system.  You can implement web-based storage system or redefine how file signatures are calculated and cached (to speed up repeated incremental copies). For example, you can decrease the number of signature calculations if you store file signatures in a cache. This is particularly useful when using immutable target storage.
+
+Bud.Cp was implemented to support all the copying in the [Bud build tool](https://github.com/urbas/bud).
 
 
 ## Use cases
