@@ -1,4 +1,4 @@
-version: 0.0.2-b{build}
+version: 0.0.3-b{build}
 image: Visual Studio 2017
 before_build:
 - ps: nuget restore
