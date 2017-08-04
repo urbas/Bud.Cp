@@ -86,8 +86,7 @@ namespace Bud {
         foreach (var relPath in relPaths) {
           Uri srcDir;
           if (relPath2SrcDir.TryGetValue(relPath, out srcDir)) {
-            throw new CopyClashException(srcDir.AbsolutePath, sourceDirUri.AbsolutePath, targetDir.AbsolutePath, 
-                                         relPath);
+            throw new CopyClashException(srcDir, sourceDirUri, targetDir, relPath);
           }
           relPath2SrcDir.Add(relPath, sourceDirUri);
         }

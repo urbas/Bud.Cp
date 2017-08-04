@@ -82,8 +82,8 @@ namespace Bud {
       dir.CreateFile("foo2", "sources2", "foo.txt");
 
       var exception = Assert.Throws<CopyClashException>(() => CopyDir(new[] {sourceDir, sourceDir2}, targetDir));
-      Assert.AreEqual($"Could not copy directories '{sourceDir.AbsolutePath}/' and '{sourceDir2.AbsolutePath}/' " +
-                      $"to '{targetDir.AbsolutePath}/'. Both source directories contain file 'foo.txt'.",
+      Assert.AreEqual($"Could not copy directories '{sourceDir}/' and '{sourceDir2}/' " +
+                      $"to '{targetDir}/'. Both source directories contain file 'foo.txt'.",
                       exception.Message);
     }
 
