@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CopyClashException.cs" />
     <Compile Include="Cp.cs" />
     <Compile Include="IStorage.cs" />
     <Compile Include="LocalStorage.cs" />
