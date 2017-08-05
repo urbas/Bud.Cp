@@ -27,7 +27,7 @@ Warning: This will delete files in the target directory that no longer exist in 
 ### Copy multiple source directories into a single target dir
 
 ```csharp
-Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
+Bud.Cp.CopyDir(sourceDirs: mySourceDirs, targetDir: "myTargetDir");
 ```
 
 Warning: This will delete files in the target directory that no longer exist in the source directory.
@@ -39,5 +39,5 @@ With the `storage` parameter you can convince `Bud.Cp.CopyDirs` to copy all kind
 
 ```csharp
 Bud.Cp.CopyDir(sourceDir: "mySourceDir", targetDir: "myTargetDir", storage: new MyWebStorage());
-Bud.Cp.CopyDirs(sourceDirs: mySourceDirs, targetDir: "myTargetDir", storage: new MyWebStorage());
+Bud.Cp.CopyDir(sourceDirs: mySourceDirs, targetDir: "myTargetDir", storage: new MyWebStorage());
 ```
