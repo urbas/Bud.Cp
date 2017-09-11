@@ -43,10 +43,11 @@
   <ItemGroup>
     <Compile Include="CopyClashException.cs" />
     <Compile Include="Cp.cs" />
+    <Compile Include="IOverwritePolicy.cs" />
     <Compile Include="IStorage.cs" />
     <Compile Include="LocalStorage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Sha256FileSignatures.cs" />
+    <Compile Include="LocalFileOverwritePolicy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

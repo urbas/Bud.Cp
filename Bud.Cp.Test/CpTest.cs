@@ -40,11 +40,11 @@ namespace Bud {
 
     [Test]
     public void CopyDir_skip_unmodified() {
-      CopyDir(sourceDir, targetDir, storage.Object);
-      CopyDir(sourceDir, targetDir, storage.Object);
+      var signatures = SpiedSha256LocalFileSignatures();
+      CopyDir(sourceDir, targetDir, storage.Object, signatures.Object);
+      CopyDir(sourceDir, targetDir, storage.Object, signatures.Object);
       storage.Verify(s => s.CopyFile(fooSrcFile, fooTargetFile), Times.Once);
-      storage.Verify(s => s.GetSignature(fooSrcFile), Times.Once);
-      storage.Verify(s => s.GetSignature(fooTargetFile), Times.Once);
+      signatures.Verify(s => s.ShouldOverwrite(fooSrcFile, fooTargetFile), Times.Once);
     }
 
     [Test]
@@ -124,9 +124,15 @@ namespace Bud {
                  .Returns((Uri dir) => localStorage.EnumerateFiles(dir));
       mockStorage.Setup(self => self.EnumerateDirectories(It.IsAny<Uri>()))
                  .Returns((Uri dir) => localStorage.EnumerateDirectories(dir));
-      mockStorage.Setup(self => self.GetSignature(It.IsAny<Uri>()))
-                 .Returns((Uri file) => localStorage.GetSignature(file));
       return mockStorage;
+    }
+
+    private static Mock<IOverwritePolicy> SpiedSha256LocalFileSignatures() {
+      var mockSignatures = new Mock<IOverwritePolicy>();
+      var realSignatures = new LocalFileOverwritePolicy();
+      mockSignatures.Setup(self => self.ShouldOverwrite(It.IsAny<Uri>(), It.IsAny<Uri>()))
+                    .Returns((Uri src, Uri tgt) => realSignatures.ShouldOverwrite(src, tgt));
+      return mockSignatures;
     }
   }
 }

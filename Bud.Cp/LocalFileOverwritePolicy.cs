@@ -1,12 +1,19 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 
 namespace Bud {
-  internal class Sha256FileSignatures {
+  /// <summary>
+  /// Calculates SHA-256 signatures of files without doing any caching.
+  /// </summary>
+  public class LocalFileOverwritePolicy : IOverwritePolicy {
     private readonly byte[] buffer = new byte[16384];
 
-    public byte[] GetSignature(Uri file) {
+    public bool ShouldOverwrite(Uri sourceAbsPath, Uri targetAbsPath)
+      => !GetSignature(sourceAbsPath).SequenceEqual(GetSignature(targetAbsPath));
+
+    private byte[] GetSignature(Uri file) {
       var hashAlgorithm = SHA256.Create();
       hashAlgorithm.Initialize();
       using (var fileStream = File.OpenRead(file.AbsolutePath)) {

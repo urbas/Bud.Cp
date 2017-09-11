@@ -5,13 +5,10 @@ using System.Linq;
 using static System.IO.SearchOption;
 
 namespace Bud {
-  internal class LocalStorage : IStorage {
-    private readonly Sha256FileSignatures fileSignatures;
-
-    public LocalStorage() {
-      fileSignatures = new Sha256FileSignatures();
-    }
-
+  /// <summary>
+  /// A local filesystem implementation of <see cref="IStorage"/>.
+  /// </summary>
+  public class LocalStorage : IStorage {
     public void CreateDirectory(Uri dir) => Directory.CreateDirectory(dir.AbsolutePath);
 
     public IEnumerable<Uri> EnumerateFiles(Uri dir)
@@ -26,8 +23,6 @@ namespace Bud {
 
     public void CopyFile(Uri sourceFile, Uri targetFile)
       => File.Copy(sourceFile.AbsolutePath, targetFile.AbsolutePath, overwrite: true);
-
-    public byte[] GetSignature(Uri file) => fileSignatures.GetSignature(file);
 
     public void DeleteFile(Uri file) => File.Delete(file.AbsolutePath);
 

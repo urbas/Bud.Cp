@@ -15,8 +15,9 @@ namespace Bud {
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
     /// <exception cref="Exception">thrown if the source directories contains files with the same name.</exception>
-    public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null) {
+    public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null) {
       storage = storage ?? new LocalStorage();
+      overwritePolicy = overwritePolicy ?? new LocalFileOverwritePolicy();
       targetDir = AppendSlash(targetDir);
 
       storage.CreateDirectory(targetDir);
@@ -29,7 +30,7 @@ namespace Bud {
 
       var targetRelUris = GetRelPaths(storage, targetDir);
       CopyMissingFiles(sourceDirUris, sourceRelUris, targetDir, targetRelUris, storage);
-      OverwriteExistingFiles(sourceDirUris, sourceRelUris, targetDir, targetRelUris, storage);
+      OverwriteExistingFiles(sourceDirUris, sourceRelUris, targetDir, targetRelUris, storage, overwritePolicy);
       DeleteExtraneousFiles(sourceRelUris, targetDir, targetRelUris, storage);
     }
 
@@ -42,8 +43,8 @@ namespace Bud {
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
     /// <remarks>this function delegates to
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
-    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null)
-      => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), storage);
+    public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
+      => CopyDir(sourceDirs.Select(path => new Uri(path)), new Uri(targetDir), storage, overwritePolicy);
 
     /// <summary>
     ///   Copies the source directory to a single target directory. The target directory will contain all files from the
@@ -53,8 +54,8 @@ namespace Bud {
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
-    public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null)
-      => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage);
+    public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
+      => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage, overwritePolicy);
 
     /// <summary>
     ///   Copies the source directory to a single target directory. The target directory will contain all files from the
@@ -64,8 +65,8 @@ namespace Bud {
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
-    public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null)
-      => CopyDir(new[] {sourceDir}, targetDir, storage);
+    public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
+      => CopyDir(new[] {sourceDir}, targetDir, storage, overwritePolicy);
 
     private static void SyncDirectories(IEnumerable<Uri> sourceDirUris, Uri targetDir, IStorage storage) {
       var sourceSubDirs = sourceDirUris.Aggregate(new HashSet<Uri>(),
@@ -117,14 +118,14 @@ namespace Bud {
     }
 
     private static void OverwriteExistingFiles(List<Uri> sourceDirUris, List<HashSet<Uri>> sourceRelUris,
-                                               Uri targetDir, HashSet<Uri> targetRelUris, IStorage storage) {
+                                               Uri targetDir, HashSet<Uri> targetRelUris, IStorage storage, IOverwritePolicy overwritePolicy) {
       for (var dirIndex = 0; dirIndex < sourceDirUris.Count; dirIndex++) {
         var sourceDirUri = sourceDirUris[dirIndex];
         foreach (var relPathToOverwrite in sourceRelUris[dirIndex]) {
           if (targetRelUris.Contains(relPathToOverwrite)) {
             var sourceAbsPath = new Uri(sourceDirUri, relPathToOverwrite);
             var targetAbsPath = new Uri(targetDir, relPathToOverwrite);
-            if (!FileSignaturesEqual(storage, sourceAbsPath, targetAbsPath)) {
+            if (overwritePolicy.ShouldOverwrite(sourceAbsPath, targetAbsPath)) {
               storage.CopyFile(sourceAbsPath, targetAbsPath);
             }
           }
@@ -152,9 +153,6 @@ namespace Bud {
         }
       }
     }
-
-    private static bool FileSignaturesEqual(IStorage storage, Uri sourceAbsPath, Uri targetAbsPath)
-      => storage.GetSignature(sourceAbsPath).SequenceEqual(storage.GetSignature(targetAbsPath));
 
     private static Uri AppendSlash(Uri targetDir)
       => targetDir.AbsolutePath.EndsWith("/") ? targetDir : new Uri(targetDir + "/");
