@@ -14,6 +14,8 @@ namespace Bud {
     /// <param name="sourceDirs">URIs of the directories from which to copy files.</param>
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <param name="overwritePolicy">this class tells the copy algorithm whether the target file is out of date and
+    /// has to be overwritten.</param>
     /// <exception cref="Exception">thrown if the source directories contains files with the same name.</exception>
     public static void CopyDir(IEnumerable<Uri> sourceDirs, Uri targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null) {
       storage = storage ?? new LocalStorage();
@@ -41,6 +43,8 @@ namespace Bud {
     /// <param name="sourceDirs">URIs of the directories from which to copy files.</param>
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <param name="overwritePolicy">this class tells the copy algorithm whether the target file is out of date and
+    /// has to be overwritten.</param>
     /// <remarks>this function delegates to
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
     public static void CopyDir(IEnumerable<string> sourceDirs, string targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
@@ -53,6 +57,7 @@ namespace Bud {
     /// <param name="sourceDirs">URI of the directory from which to copy files.</param>
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <remarks>this function delegates to
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
     public static void CopyDir(string sourceDir, string targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
       => CopyDir(new Uri(sourceDir), new Uri(targetDir), storage, overwritePolicy);
@@ -64,6 +69,9 @@ namespace Bud {
     /// <param name="sourceDirs">URI of the directory from which to copy files.</param>
     /// <param name="targetDir">URI of the directory into which to copy files.</param>
     /// <param name="storage">the storage API this function will use to perform the copy.</param>
+    /// <param name="overwritePolicy">this class tells the copy algorithm whether the target file is out of date and
+    /// has to be overwritten.</param>
+    /// <remarks>this function delegates to
     /// <see cref="CopyDir(System.Collections.Generic.IEnumerable{System.Uri},System.Uri,Bud.IStorage)"/>.</remarks>
     public static void CopyDir(Uri sourceDir, Uri targetDir, IStorage storage = null, IOverwritePolicy overwritePolicy = null)
       => CopyDir(new[] {sourceDir}, targetDir, storage, overwritePolicy);
